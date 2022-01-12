@@ -20,6 +20,7 @@ setup(
         # If any package contains *.txt or *.rst files, include them:
         "": [
             "*.go",
+            "*.exe",
             "data/map/*.png",
             "data/map/*.json",
             "data/nav/*.txt",

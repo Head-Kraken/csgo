@@ -19,6 +19,7 @@ class DemoParser:
         trade_time (int): Length of the window for a trade (in seconds). Default is 5.
         dmg_rolled (bool): Boolean if you want damages rolled up (since multiple damages for a player can happen in 1 tick from the same weapon.)
         buy_style (string): Buy style string, one of "hltv" or "csgo"
+        use_exe_parser (bool): Flag if you want to parse demo on Windows without installing Go lang
 
     Raises:
         ValueError: Raises a ValueError if the Golang version is lower than 1.14
@@ -35,6 +36,7 @@ class DemoParser:
         trade_time=5,
         dmg_rolled=False,
         buy_style="hltv",
+        use_exe_parser=None
     ):
         # Set up logger
         if log:
@@ -124,6 +126,12 @@ class DemoParser:
         self.parse_frames = parse_frames
         self.logger.info("Rollup damages set to " + str(self.dmg_rolled))
         self.logger.info("Parse frames set to " + str(self.parse_frames))
+        self.logger.info("Setting demo id to " + self.demo_id)
+
+        if (use_exe_parser is None) | (not use_exe_parser):
+            self.use_exe_parser = False
+        else:
+            self.use_exe_parser = True
 
         # Set parse error to False
         self.parse_error = False
@@ -139,16 +147,19 @@ class DemoParser:
             FileNotFoundError: Raises a FileNotFoundError if the demofile path does not exist.
         """
         # Check if Golang version is compatible
-        acceptable_go = check_go_version()
-        if not acceptable_go:
-            self.logger.error(
-                "Error calling Go. Check if Go is installed using 'go version'. Need at least v1.14.0."
-            )
-            raise ValueError(
-                "Error calling Go. Check if Go is installed using 'go version'. Need at least v1.14.0."
-            )
+        if self.use_exe_parser:
+            self.logger.info("Use exe parser")
         else:
-            self.logger.info("Go version>=1.14.0")
+            acceptable_go = check_go_version()
+            if not acceptable_go:
+                self.logger.error(
+                    "Error calling Go. Check if Go is installed using 'go version'. Need at least v1.14.0."
+                )
+                raise ValueError(
+                    "Error calling Go. Check if Go is installed using 'go version'. Need at least v1.14.0."
+                )
+            else:
+                self.logger.info("Go version>=1.14.0")
 
         # Check if demofile exists
         if not os.path.exists(os.path.abspath(self.demofile)):
@@ -156,12 +167,10 @@ class DemoParser:
             raise FileNotFoundError("Demofile path does not exist!")
 
         path = os.path.join(os.path.dirname(__file__), "")
-        self.logger.info("Running Golang parser from " + path)
+        self.logger.info("Running parser from " + path)
         self.logger.info("Looking for file at " + self.demofile)
-        self.parser_cmd = [
-            "go",
-            "run",
-            "parse_demo.go",
+        self.parser_cmd = [os.path.join(os.path.dirname(os.path.abspath(__file__)), 'parse_demo.exe')] if self.use_exe_parser else ["go", "run", "parse_demo.go"]
+        self.parser_cmd += [
             "-demo",
             self.demofile,
             "-parserate",
